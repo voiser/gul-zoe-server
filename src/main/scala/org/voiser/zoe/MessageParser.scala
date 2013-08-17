@@ -5,7 +5,7 @@ class MessageParser(private val orig: String) {
   lazy val map = parse(orig)
   
   /**
-   * Parses the input stream and builds a key-value map
+   * Parses the input string and builds a key-value map
    */
   def parse(s : String) = {
     def split(pair: String) = {
@@ -30,7 +30,7 @@ class MessageParser(private val orig: String) {
    */
   def get(key: String) = map get key match {
     case None => None
-    case Some(list) => Some(list head)
+    case Some(list) => Some(list.head)
   }
  
   /**
