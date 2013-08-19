@@ -12,7 +12,7 @@ import org.voiser.zoe.MessageParser
 class ServerTest extends FunSuite {
 
   trait Fixtures {
-    val s1 = new Server(1, "domain1")
+    val s1 = new Server(1, "domain1", null)
   }
 
   test("No dd means local delivery") {
