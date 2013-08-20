@@ -26,99 +26,60 @@
 
 package org.voiser.zoe
 
-class Server(val port: Int = 30000, val domain: String, val gateway: String, val conf: Conf) { 
+import java.net.Socket
+import scala.io.Source
+import java.net.ServerSocket
+import scala.actors.Actor
+import scala.actors.Actor._
+import javax.print.PrintService
+
+class Server(
+    val port: Int, 
+    val domain: String, 
+    val gateway: String, 
+    val conf: Conf) { 
 
   /**
-   * 
+   * The message router. 
+   * This object is responsible of calculating destinations for a given message
    */
-  val identityTransformer = (mp: MessageParser) => mp
+  val router = new Router(domain, gateway, conf)
   
   /**
-   * Transforms a message to be sent to the gateway
+   * The message dispatcher.
    */
-  val gatewayTransformer = (gateway: String, visited: String) => (mp: MessageParser) => {
-    new MessageParser(new MessageBuilder(mp map).dd(gateway).vd(visited).msg)
+  private val dispatcher = new Dispatcher(router);
+  dispatcher.start
+  
+  /**
+   * Dispatches an incoming message.
+   */
+  def dispatch(mp: MessageParser) = dispatcher ! mp 
+    
+  /**
+   * Reads from a socket into a String
+   */
+  def read(socket: Socket): String = {
+    val is = socket getInputStream()
+    Source.fromInputStream(is, "UTF-8").mkString
   }
   
   /**
-   * Builds a list of destinations for local, point-to-point delivery
+   * Starts the server, accepting connections and dispatching messages
    */
-  val ptpDispatcher = (mp: MessageParser) => mp get "dst" match {
-    case None => List()
-    case Some(agent) => {
-      if (conf.agents.contains(agent)) List(new Destination(conf agentHost(agent), conf agentPort(agent), identityTransformer))
-      else List()
-    }
-  }
-  
-  /**
-   * Builds a list of destinations for local, topic delivery
-   */
-  val topicDispatcher = (mp: MessageParser) => mp get "topic" match {
-    case None => List()
-    case Some(topic) => {
-      val dests = for {agent <- conf agentsForTopic(topic)} yield new Destination(conf agentHost(agent), conf agentPort(agent), identityTransformer)
-      dests toList
-    }
-  }
-  
-  /**
-   * 
-   */
-  val dispatchers = List(ptpDispatcher, topicDispatcher)
-  
-  /**
-   * <tt>true</tt> if the message must be locally delivered
-   */
-  def local(mp: MessageParser) = mp get "dd" match {
-    case None => true
-    case Some(destination) => destination == domain
-  }
-  
-  /**
-   * <tt>true</tt> if the message will be delivered to an already visited domain
-   */
-  def loops(mp: MessageParser) = mp get "dd" match {
-    case None => false
-    case Some(destination) => mp.list("vd") match {
-      case None => false
-      case Some(visited) => visited.contains(destination)
-    }
-  }
-
-  /**
-   * Bulds a list of destinations for local delivery
-   */
-  def localDestinations(mp: MessageParser) = {
-    val destinations = for (d <- dispatchers) yield d(mp)
-    destinations.flatten.distinct
-  }
-  
-  /**
-   * Bulds a list of destinations for remote delivery
-   */
-  def remoteDestinations(mp: MessageParser): List[Destination] = {
-    mp get "dd" match {
-      case None => List()
-      case Some(domain) => List(new Destination(conf domainHost(domain), conf domainPort(domain), identityTransformer))
-    }
-  }
-  
-  /**
-   * Calculates the destinations an incoming message should be sent to.
-   * Every destination contains a host, a port and a transformer, which is a function
-   * that should be applied to the incoming message before sending it to the destination host/port
-   */
-  def destinations(mp: MessageParser) = {
-    if (local(mp)) {
-      localDestinations(mp) match {
-        case List() => List(new Destination(conf domainHost(gateway), conf domainPort(gateway), gatewayTransformer(gateway, domain)))
-        case x => x 
+  def start() {
+    val serverSocket = new ServerSocket(port)
+    serverSocket.setReuseAddress(true)
+    while (true) {
+      try {
+        val socket = serverSocket accept
+        val message = new MessageParser(read(socket))
+        socket.close
+        dispatch(message)
       }
-    } 
-    else {
-      if (!loops(mp)) remoteDestinations(mp)
-      else List()
+      catch {
+      case e: Exception => e.printStackTrace()
+      }
     }
   }
 }

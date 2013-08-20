@@ -26,51 +26,52 @@
 
 package org.voiser.zoe
 
-class MessageParser(private val orig: String) {
+import scala.actors.Actor
+import scala.actors.Actor._
+import java.net.Socket
 
-  lazy val map = parse(orig)
-  
+class Dispatcher(router: Router) extends Actor {
+
   /**
-   * Parses the input string and builds a key-value map
+   * The actor loop 
    */
-  def parse(s : String) = {
-    def split(pair: String) = {
-      val splitPoint = pair.indexOf('=')
-      val key = pair.substring(0, splitPoint)
-      val value = pair.substring(splitPoint + 1)      
-      (key, value)
-    }
-    def parse(pair : String, acc : Map[String, List[String]]) = {
-      val (key, value) = split(pair)
-      acc get key match {
-        case None => acc + (key -> List(value)) 
-        case Some(xs) => acc + (key -> (value :: xs))
+  def act() = {
+    loop {
+      react {
+        case mp: MessageParser => {
+          for (dest <- router.destinations(mp)) {
+            println("Dispatching message " + mp + " to destination " + dest)
+            this ! new Message(mp, dest)
+          }
+        }
+        case Message(mp, dest) => {
+            val host = dest.host
+            val port = dest.port
+            val tr = dest.transformer
+            val msg = tr(mp)
+            println("  message transformed to " + msg)
+            send(msg, host, port)          
+        }
       }
     }
-    val pairs = s.split("&")    
-    pairs.foldRight(Map[String, List[String]]())(parse)
+  }
+
+  /**
+   * Avoid exceptions to stop the actor.
+   */
+  override def exceptionHandler = {
+    case e: Exception => e.printStackTrace()
   }
   
-  /** 
-   * Returns the first key of a key-value pair
+  /**
+   * Sends a message to a host:port
    */
-  def get(key: String) = map get key match {
-    case None => None
-    case Some(list) => Some(list.head)
+  def send(mp: MessageParser, host: String, port: Int) = {
+    println("  sending " + mp + " to " + host + ":" + port)
+    val socket = new Socket(host, port)
+    val os = socket.getOutputStream()
+    os.write(mp.bytes)
+    os.close
+    println("  sent")
   }
- 
-  /**
-   * Returns a list of all values for a given key
-   */
-  def list(key: String) = map get key
-  
-  /**
-   * 
-   */
-  override def toString() = orig
-  
-  /**
-   * 
-   */
-  def bytes = orig getBytes
 }
