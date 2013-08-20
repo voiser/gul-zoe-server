@@ -109,7 +109,7 @@ class Server(val port: Int = 30000, val domain: String, val gateway: String, val
    * Every destination contains a host, a port and a transformer, which is a function
    * that should be applied to the incoming message before sending it to the destination host/port
    */
-  def destinations(mp: MessageParser): List[Destination] = {
+  def destinations(mp: MessageParser) = {
     if (local(mp)) {
       localDestinations(mp) match {
         case List() => List(new Destination(conf domainHost(gateway), conf domainPort(gateway), gatewayTransformer(gateway, domain)))
