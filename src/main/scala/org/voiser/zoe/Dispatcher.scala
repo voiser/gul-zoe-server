@@ -45,12 +45,12 @@ class Dispatcher(router: Router) extends Actor {
           }
         }
         case Message(mp, dest) => {
-            val host = dest.host
-            val port = dest.port
-            val tr = dest.transformer
-            val msg = tr(mp)
-            println("  message transformed to " + msg)
-            send(msg, host, port)          
+          val host = dest.host
+          val port = dest.port
+          val tr = dest.transformer
+          val msg = tr(mp)
+          println("  message transformed to " + msg)
+          send(msg, host, port)          
         }
       }
     }
