@@ -73,4 +73,19 @@ class MessageParser(private val orig: String) {
    * 
    */
   def bytes = orig getBytes
+  
+  /**
+   * 
+   */
+  def log(header: String) {
+    val cid = get("_cid") match {
+      case None => "[no CID]"
+      case Some(string) => string
+    }
+    println(cid + " " + header)
+    for {
+      key <- map.keySet
+      value <- list(key)
+    } println (cid + "   " + key + " = " + value.mkString(", "))
+  }
 }

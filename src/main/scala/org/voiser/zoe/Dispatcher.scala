@@ -39,8 +39,8 @@ class Dispatcher(router: Router) extends Actor {
     loop {
       react {
         case mp: MessageParser => {
+          mp.log("Received message:")
           for (dest <- router.destinations(mp)) {
-            println("Dispatching message " + mp + " to destination " + dest)
             this ! new Message(mp, dest)
           }
         }
@@ -49,7 +49,19 @@ class Dispatcher(router: Router) extends Actor {
           val port = dest.port
           val tr = dest.transformer
           val msg = tr(mp)
-          println("  message transformed to " + msg)
+          val destination = msg get "dst" match {
+            case Some(d) => "agent:" + d
+            case None => msg get "topic" match {
+              case Some(t) => "topic:" + t
+              case None => "unknown destination"
+            }
+          }
+          val domain = msg get "dd" match {
+            case Some(d) => "domain:" + d
+            case None => "local domain"
+          }
+          
+          msg.log("Sending message to " + host + ":" + port + " (" + destination + " " + domain + ")")
           send(msg, host, port)          
         }
       }
@@ -67,11 +79,9 @@ class Dispatcher(router: Router) extends Actor {
    * Sends a message to a host:port
    */
   def send(mp: MessageParser, host: String, port: Int) = {
-    println("  sending " + mp + " to " + host + ":" + port)
     val socket = new Socket(host, port)
     val os = socket.getOutputStream()
     os.write(mp.bytes)
     os.close
-    println("  sent")
   }
 }

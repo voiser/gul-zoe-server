@@ -36,6 +36,12 @@ class MessagesTest extends FunSuite {
       assert(mp2.get("c") === Some("=c1="))
     }
   }
+  
+  test("Inpection") { // just for inspection, not actually a test
+    new Fixtures {
+      mp1.log("Message")
+    }
+  }
 }
 
 
