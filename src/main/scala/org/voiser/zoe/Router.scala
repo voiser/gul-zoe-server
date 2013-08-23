@@ -40,16 +40,31 @@ class Router (val domain: String, val gateway: String, val conf: Conf) {
     (gateway: String, visited: String) => 
       (mp: MessageParser) => 
         new MessageParser(new MessageBuilder(mp map).dd(gateway).vd(visited).msg)
+
+  /**
+   * Builds a destination for a given local agent, assuming the agent is correctly configured
+   */
+  def localdest(agent: String) = new Destination(conf agentHost(agent), conf agentPort(agent), identityTransformer)
+
+  /**
+   * Builds a destination for a given remote domain agent, assuming the agent is correctly configured
+   */
+  def domaindest(agent: String) = new Destination(conf domainHost(agent), conf domainPort(agent), identityTransformer)
+
+  /**
+   * Builds a destination for the gateway, assuming it is correctly configured
+   */
+  def gatewaydest = new Destination(conf domainHost(gateway), conf domainPort(gateway), gatewayTransformer(gateway, domain))
   
   /**
-   * Builds a destination for a given agent
+   * Builds a destination for a given agent, taking care of the correct configuration
    */
   def ptpDest (agent: String) = 
-    if (conf.agents.contains(agent)) Some(new Destination(conf agentHost(agent), conf agentPort(agent), identityTransformer))
+    if (conf.agents.contains(agent)) Some(localdest(agent))
     else None 
   
   /**
-   * Builds a list of valid destinations for a given topic
+   * Builds a list of valid destinations for a given topic, taking care of the correct configuration
    */
   def topicDest (topic: String) = 
     if (conf.topics.contains(topic)) conf agentsForTopic(topic) map { ptpDest(_) } filter { _.isDefined } map { _.get } toList
@@ -107,7 +122,7 @@ class Router (val domain: String, val gateway: String, val conf: Conf) {
    */
   def remoteDestinations(mp: MessageParser): List[Destination] = 
     mp get "dd" map { 
-      x => List(new Destination(conf domainHost(x), conf domainPort(x), identityTransformer))
+      x => List(domaindest(x))
     } getOrElse List()
   
   /**
@@ -118,7 +133,7 @@ class Router (val domain: String, val gateway: String, val conf: Conf) {
   def destinations(mp: MessageParser) = {
     if (local(mp)) {
       localDestinations(mp) match {
-        case List() => List(new Destination(conf domainHost(gateway), conf domainPort(gateway), gatewayTransformer(gateway, domain)))
+        case List() => List(gatewaydest)
         case x => x 
       }
     } 
