@@ -26,7 +26,6 @@
 
 package org.voiser.zoe
 
-import org.ini4j.Wini
 import java.io.File
 import org.ini4j.Ini
 import scala.collection.JavaConversions
@@ -73,7 +72,7 @@ class Conf(val is: InputStream) {
   def section(name: String) = {
     val v = ini get name
     if (v != null) v
-    else throw new ConfException("No section " + name)
+    else throw new ConfException("No section '" + name + "'")
   }
   
   /**
@@ -82,42 +81,32 @@ class Conf(val is: InputStream) {
   def value(sec: String, name: String) = {
     val s = section(sec)
     val v = s.get(name)
-    if (v != null) v
-    else throw new ConfException("No value " + name + " in section " + sec)
+    if (v != null) Some(v)
+    else None
   }
   
   /**
    * 
    */
-  def agentHost(agent: String) = {
-    try value("agent " + agent, "host")
-    catch { 
-    case e:ConfException => "localhost"
-    }
-  }
+  def agentHost(agent: String) = value("agent " + agent, "host") getOrElse "localhost"
 
   /**
    * 
    */
-  def agentPort(agent: String) = value ("agent " + agent, "port") toInt
+  def agentPort(agent: String) = value ("agent " + agent, "port") map { _.toInt } get
   
   /**
    * 
    */
-  def agentsForTopic(topic: String) = value ("topic " + topic, "agents") split " "
+  def agentsForTopic(topic: String) = value ("topic " + topic, "agents") map { _.split(" ") } get
 
   /**
    * 
    */  
-  def domainHost(domain: String) = value ("domain " + domain, "host")
+  def domainHost(domain: String) = value ("domain " + domain, "host") get
 
   /**
    * 
    */
-  def domainPort(domain: String) = { 
-    try value("domain " + domain, "port") toInt
-    catch {
-    case e:ConfException => 30000
-    }
-  }
+  def domainPort(domain: String) = value("domain " + domain, "port") map { _.toInt } getOrElse 30000
 }

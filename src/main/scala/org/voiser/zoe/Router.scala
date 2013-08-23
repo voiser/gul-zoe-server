@@ -36,31 +36,42 @@ class Router (val domain: String, val gateway: String, val conf: Conf) {
   /**
    * Transforms a message to be sent to the gateway
    */
-  val gatewayTransformer = (gateway: String, visited: String) => (mp: MessageParser) => {
-    new MessageParser(new MessageBuilder(mp map).dd(gateway).vd(visited).msg)
-  }
+  val gatewayTransformer = 
+    (gateway: String, visited: String) => 
+      (mp: MessageParser) => 
+        new MessageParser(new MessageBuilder(mp map).dd(gateway).vd(visited).msg)
   
+  /**
+   * Builds a destination for a given agent
+   */
+  def ptpDest (agent: String) = 
+    if (conf.agents.contains(agent)) Some(new Destination(conf agentHost(agent), conf agentPort(agent), identityTransformer))
+    else None 
+  
+  /**
+   * Builds a list of valid destinations for a given topic
+   */
+  def topicDest (topic: String) = 
+    if (conf.topics.contains(topic)) conf agentsForTopic(topic) map { ptpDest(_) } filter { _.isDefined } map { _.get } toList
+    else List()
+    
   /**
    * Builds a list of destinations for local, point-to-point delivery
    */
-  val ptpDispatcher = (mp: MessageParser) => mp get "dst" match {
-    case None => List()
-    case Some(agent) => {
-      if (conf.agents.contains(agent)) List(new Destination(conf agentHost(agent), conf agentPort(agent), identityTransformer))
-      else List()
-    }
-  }
+  val ptpDispatcher = 
+    (mp: MessageParser) => 
+      mp get "dst" map {
+        agent => ptpDest(agent) map { List(_) } getOrElse List()
+      } getOrElse List()
   
   /**
    * Builds a list of destinations for local, topic delivery
    */
-  val topicDispatcher = (mp: MessageParser) => mp get "topic" match {
-    case None => List()
-    case Some(topic) => {
-      val dests = for {agent <- conf agentsForTopic(topic)} yield new Destination(conf agentHost(agent), conf agentPort(agent), identityTransformer)
-      dests toList
-    }
-  }
+  val topicDispatcher = 
+    (mp: MessageParser) => 
+      mp get "topic" map {
+        topic => topicDest(topic)
+      } getOrElse List()
   
   /**
    * 
@@ -70,10 +81,7 @@ class Router (val domain: String, val gateway: String, val conf: Conf) {
   /**
    * <tt>true</tt> if the message must be locally delivered
    */
-  def local(mp: MessageParser) = mp get "dd" match {
-    case None => true
-    case Some(destination) => destination == domain
-  }
+  def local(mp: MessageParser) = mp get "dd" map { _ == domain } getOrElse true
   
   /**
    * <tt>true</tt> if the message will be delivered to an already visited domain
@@ -85,7 +93,7 @@ class Router (val domain: String, val gateway: String, val conf: Conf) {
       case Some(visited) => visited.contains(destination)
     }
   }
-
+  
   /**
    * Bulds a list of destinations for local delivery
    */
@@ -97,12 +105,10 @@ class Router (val domain: String, val gateway: String, val conf: Conf) {
   /**
    * Bulds a list of destinations for remote delivery
    */
-  def remoteDestinations(mp: MessageParser): List[Destination] = {
-    mp get "dd" match {
-      case None => List()
-      case Some(domain) => List(new Destination(conf domainHost(domain), conf domainPort(domain), identityTransformer))
-    }
-  }
+  def remoteDestinations(mp: MessageParser): List[Destination] = 
+    mp get "dd" map { 
+      x => List(new Destination(conf domainHost(x), conf domainPort(x), identityTransformer))
+    } getOrElse List()
   
   /**
    * Calculates the destinations an incoming message should be sent to.
