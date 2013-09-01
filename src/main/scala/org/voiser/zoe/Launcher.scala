@@ -42,16 +42,16 @@ object Launcher {
     println("Parameters:")
     println
     println("  -p <int>")
-    println("  --port <int>           Zoe server port. (Optional, default 30000)")
+    println("  --port <int>           Zoe server port. (optional, default 30000)")
     println
     println("  -d <string>")
-    println("  --domain <string>      Zoe server domain.")
+    println("  --domain <string>      Zoe server domain (required)")
     println
     println("  -g <string>")
-    println("  --gateway <string>     Server gateway domain.")    
+    println("  --gateway <string>     Server gateway domain (required)")    
     println
     println("  -c <path>")
-    println("  --conf <path>          zoe.conf path")
+    println("  --conf <path>          zoe.conf path (optional)")
   }
   
   def parse(args: Array[String]) {
@@ -72,12 +72,16 @@ object Launcher {
         case Some(s) => s
       } 
 
+      val conf = new Conf()
+      
       val confpath = opConfFile value match {
-        case None => throw new Exception("Conf path needed")
-        case Some(s) => s
+        case None => "(none)"
+        case Some(s) => {
+          ConfFileReader.register(new FileInputStream(s), conf)
+          s
+        }
       } 
 
-      val conf = new Conf(new FileInputStream(confpath))
       val server = new Server(port, domain, gateway, conf)
       
       println("Starting server on port " + port)

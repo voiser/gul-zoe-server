@@ -26,87 +26,61 @@
 
 package org.voiser.zoe
 
-import java.io.File
-import org.ini4j.Ini
-import scala.collection.JavaConversions
-import java.io.InputStream
-import java.io.ByteArrayInputStream
-import java.io.FileInputStream
-import org.ini4j.Profile.Section
+import scala.collection.mutable.HashMap
+import scala.collection.mutable.LinkedList
+import scala.collection.mutable.MutableList
 
-class Conf(val is: InputStream) {
+class Conf {
+    
+  /**
+   * 
+   */
+  class Agent (val name: String, val host: String, val port: Int) extends Host
   
-  /**
-   * 
-   */
-  class ConfException(msg: String) extends Exception(msg)
-
-  /**
-   * 
-   */
-  def this(s: String) = this(new FileInputStream(s))
+  class Domain (val name: String, val host: String, val port: Int) extends Host
   
-  /**
-   * 
-   */
-  val ini = new Ini(is)
-  
-  /**
-   * 
-   */
-  lazy val sections = JavaConversions.asScalaSet(ini.keySet())
-  
-  /**
-   * 
-   */
-  lazy val agents = sections filter { _ startsWith "agent " } map { _ substring 6 }
-
-  /**
-   * 
-   */
-  lazy val topics = sections filter { _ startsWith "topic " } map { _ substring 6 }
-  
-  /**
-   * 
-   */
-  def section(name: String) = {
-    val v = ini get name
-    if (v != null) v
-    else throw new ConfException("No section '" + name + "'")
+  class Topic (val name: String) {
+    val agents = MutableList[String]()
   }
   
   /**
    * 
    */
-  def value(sec: String, name: String) = {
-    val s = section(sec)
-    val v = s.get(name)
-    if (v != null) Some(v)
-    else None
+  val agentMap = new HashMap[String, Agent] 
+  
+  val topicMap = new HashMap[String, Topic]
+  
+  val domainMap = new HashMap[String, Domain]
+ 
+  /**
+   * 
+   */
+  def register(agent: Agent) = synchronized { 
+    println("Registering agent " + agent.name + " at " + agent.host + ":" + agent.port)
+    agentMap.put(agent.name, agent) 
   }
   
-  /**
-   * 
-   */
-  def agentHost(agent: String) = value("agent " + agent, "host") getOrElse "localhost"
-
-  /**
-   * 
-   */
-  def agentPort(agent: String) = value ("agent " + agent, "port") map { _.toInt } get
+  def register(topic: Topic) = synchronized {
+    println("Registering topic " + topic.name)
+    topicMap.put(topic.name, topic) 
+  }
   
+  def register(agent: String, topic: String) = synchronized {
+    println("Registering agent " + agent + " listening to topic " + topic)
+    topicMap(topic).agents += agent
+  }
+  
+  def register(domain: Domain) = synchronized {
+    println("Registering domain " + domain.name + " at " + domain.host + ":" + domain.port)
+    domainMap.put(domain.name, domain) 
+  }
+    
   /**
    * 
    */
-  def agentsForTopic(topic: String) = value ("topic " + topic, "agents") map { _.split(" ") } get
+  lazy val agents = agentMap.keySet
 
-  /**
-   * 
-   */  
-  def domainHost(domain: String) = value ("domain " + domain, "host") get
-
-  /**
-   * 
-   */
-  def domainPort(domain: String) = value("domain " + domain, "port") map { _.toInt } getOrElse 30000
+  lazy val topics = topicMap.keySet
+  
+  lazy val domains = domainMap.keySet
 }

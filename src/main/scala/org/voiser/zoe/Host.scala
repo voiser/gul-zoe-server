@@ -26,20 +26,7 @@
 
 package org.voiser.zoe
 
-class Destination(val remote: Host, val transformer:MessageParser => MessageParser) {
-
-  def host = remote.host
-  
-  def port = remote.port
-  
-  val str = remote.host + ":" + remote.port
-  
-  override def toString() = str
-  
-  override def hashCode() = str hashCode
-  
-  override def equals(other: Any) = other match {
-      case o: Destination => o.str equals str
-      case _ => false
-  }
+trait Host {
+  def host(): String
+  def port(): Int
 }

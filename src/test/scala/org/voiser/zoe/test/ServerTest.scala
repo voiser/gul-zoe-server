@@ -12,13 +12,31 @@ import org.voiser.zoe.Router
 import java.net.Socket
 import java.net.ServerSocket
 import scala.io.Source
+import org.voiser.zoe.ConfFileReader
 
 @RunWith(classOf[JUnitRunner])
 class ServerTest extends FunSuite {
 
+  class Listener(port: Int) extends Runnable {
+    var contents: String = ""
+    def run() = {
+      val socket = new ServerSocket(port)
+      socket.setReuseAddress(true)
+      val s = socket.accept()
+      contents = Source.fromInputStream(s.getInputStream(), "UTF-8").mkString("")
+      socket.close
+    }
+  }
+  
   trait Fixtures {
-    val is = this.getClass().getResourceAsStream("/zoe.conf")
-    val conf = new Conf(is)
+    val conf = new Conf()
+    ConfFileReader.register(this.getClass().getResourceAsStream("/zoe.conf"), conf);
+    // conf.register(new conf.Agent("agent1", "localhost", 30100))
+    // conf.register(new conf.Agent("agent2", "localhost", 30200))
+    // conf.register(new conf.Topic("topic1", List ("agent1", "agent2")))
+    // conf.register(new conf.Domain("extern1", "192.168.1.100", 30000))    
+    // conf.register(new conf.Domain("extern2", "192.168.2.100", 30000))
+    // conf.register(new conf.Domain("gateway", "localhost", 31000))
     val s1 = new Server(30000, "domain1", "gateway", conf)
     val r1 = s1.router
   }
@@ -105,17 +123,6 @@ class ServerTest extends FunSuite {
     }
   }
 
-  class Listener(port: Int) extends Runnable {
-    var contents: String = ""
-    def run() = {
-      val socket = new ServerSocket(port)
-      socket.setReuseAddress(true)
-      val s = socket.accept()
-      contents = Source.fromInputStream(s.getInputStream(), "UTF-8").mkString("")
-      socket.close
-    }
-  }
-  
   test("dispatch point-to-point") {
     new Fixtures {
       val l1 = new Listener(30100)

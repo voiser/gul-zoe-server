@@ -42,32 +42,36 @@ class Router (val domain: String, val gateway: String, val conf: Conf) {
         new MessageParser(new MessageBuilder(mp map).dd(gateway).vd(visited).msg)
 
   /**
-   * Builds a destination for a given local agent, assuming the agent is correctly configured
+   * Builds a destination for a given local agent, 
+   * assuming the agent is correctly configured
    */
-  def localdest(agent: String) = new Destination(conf agentHost(agent), conf agentPort(agent), identityTransformer)
+  def localdest(agent: String) = new Destination(conf.agentMap(agent), identityTransformer)
 
   /**
-   * Builds a destination for a given remote domain agent, assuming the agent is correctly configured
+   * Builds a destination for a given remote domain agent, 
+   * assuming the agent is correctly configured
    */
-  def domaindest(agent: String) = new Destination(conf domainHost(agent), conf domainPort(agent), identityTransformer)
+  def domaindest(agent: String) = new Destination(conf.domainMap(agent), identityTransformer)
 
   /**
-   * Builds a destination for the gateway, assuming it is correctly configured
+   * Builds a destination for the gateway, assuming 
+   * it is correctly configured
    */
-  def gatewaydest = new Destination(conf domainHost(gateway), conf domainPort(gateway), gatewayTransformer(gateway, domain))
+  def gatewaydest = new Destination(conf.domainMap(gateway), gatewayTransformer(gateway, domain))
   
   /**
-   * Builds a destination for a given agent, taking care of the correct configuration
+   * Builds a destination for a given agent, taking 
+   * care of the correct configuration
    */
   def ptpDest (agent: String) = 
     if (conf.agents.contains(agent)) Some(localdest(agent))
     else None 
   
   /**
-   * Builds a list of valid destinations for a given topic, taking care of the correct configuration
+   * Builds a list of valid destinations for a given topic
    */
   def topicDest (topic: String) = 
-    if (conf.topics.contains(topic)) conf agentsForTopic(topic) map { ptpDest(_) } filter { _.isDefined } map { _.get } toList
+    if (conf.topics.contains(topic)) conf.topicMap(topic).agents.map { a => new Destination(conf.agentMap(a), identityTransformer) } toList
     else List()
     
   /**
@@ -110,10 +114,12 @@ class Router (val domain: String, val gateway: String, val conf: Conf) {
   }
   
   /**
-   * Bulds a list of destinations for local delivery
+   * Builds a list of destinations for local delivery
    */
   def localDestinations(mp: MessageParser) = {
+    println ("Voy a calcular los destinos locales")
     val destinations = for (d <- dispatchers) yield d(mp)
+    println ("Mis destinos son: " + destinations)
     destinations.flatten.distinct
   }
   
