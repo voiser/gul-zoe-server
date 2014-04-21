@@ -29,8 +29,7 @@ class ServerTest extends FunSuite {
   }
   
   trait Fixtures {
-    val conf = new Conf()
-    ConfFileReader.register(this.getClass().getResourceAsStream("/zoe.conf"), conf);
+    val conf = ConfFileReader(this.getClass().getResourceAsStream("/zoe.conf"));
     // conf.register(new conf.Agent("agent1", "localhost", 30100))
     // conf.register(new conf.Agent("agent2", "localhost", 30200))
     // conf.register(new conf.Topic("topic1", List ("agent1", "agent2")))

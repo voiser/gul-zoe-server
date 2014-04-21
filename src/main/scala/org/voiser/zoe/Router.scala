@@ -45,19 +45,19 @@ class Router (val domain: String, val gateway: String, val conf: Conf) {
    * Builds a destination for a given local agent, 
    * assuming the agent is correctly configured
    */
-  def localdest(agent: String) = new Destination(conf.agentMap(agent), identityTransformer)
+  def localdest(agent: String) = new Destination(conf.agents(agent), identityTransformer)
 
   /**
    * Builds a destination for a given remote domain agent, 
    * assuming the agent is correctly configured
    */
-  def domaindest(agent: String) = new Destination(conf.domainMap(agent), identityTransformer)
+  def domaindest(agent: String) = new Destination(conf.domains(agent), identityTransformer)
 
   /**
    * Builds a destination for the gateway, assuming 
    * it is correctly configured
    */
-  def gatewaydest = new Destination(conf.domainMap(gateway), gatewayTransformer(gateway, domain))
+  def gatewaydest = new Destination(conf.domains(gateway), gatewayTransformer(gateway, domain))
   
   /**
    * Builds a destination for a given agent, taking 
@@ -71,7 +71,7 @@ class Router (val domain: String, val gateway: String, val conf: Conf) {
    * Builds a list of valid destinations for a given topic
    */
   def topicDest (topic: String) = 
-    if (conf.topics.contains(topic)) conf.topicMap(topic).agents.map { a => new Destination(conf.agentMap(a), identityTransformer) } toList
+    if (conf.topics.contains(topic)) conf.topics(topic).agents.map { a => new Destination(conf.agents(a), identityTransformer) } toList
     else List()
     
   /**

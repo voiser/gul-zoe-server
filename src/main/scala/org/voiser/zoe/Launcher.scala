@@ -72,16 +72,16 @@ object Launcher {
         case Some(s) => s
       } 
 
-      val conf = new Conf()
-      
       val confpath = opConfFile value match {
         case None => "(none)"
-        case Some(s) => {
-          ConfFileReader.register(new FileInputStream(s), conf)
-          s
-        }
+        case Some(s) => s
       } 
 
+      val conf = opConfFile value match {
+        case None => Conf()
+        case Some(s) => ConfFileReader(new FileInputStream(s))
+      }
+      
       val server = new Server(port, domain, gateway, conf)
       
       println("Starting server on port " + port)

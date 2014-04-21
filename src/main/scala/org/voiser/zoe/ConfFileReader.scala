@@ -57,32 +57,30 @@ object ConfFileReader {
   /**
    * 
    */
-  def register(is: InputStream, conf: Conf) = {
+  def apply(is: InputStream) = {
     val ini = new Ini(is)
-    val sections = JavaConversions.asScalaSet(ini.keySet())
+    val sections:List[String] = JavaConversions.asScalaSet(ini.keySet()).map(identity)(collection.breakOut)
     
-    val agents = sections filter { _ startsWith "agent " } map { _ substring 6 }
+    val agents = sections filter { _ startsWith "agent " } map { _ substring 6 }    
+    val agentList = agents.map { name: String =>
+      val host:String = value(ini, "agent " + name, "host") getOrElse "localhost"
+      val port = value(ini, "agent " + name, "port") map {_.toInt } get;
+      new Agent(name, host, port)
+    }
+
     val topics = sections filter { _ startsWith "topic " } map { _ substring 6 }
+    val topicList = topics.map { name: String =>
+      val as = value(ini, "topic " + name, "agents") map { _.split(" ").toList } getOrElse List()
+      new Topic(name, as)
+    }
+
     val domains = sections filter { _ startsWith "domain " } map { _ substring 7 }
-    
-    for (name <- agents) {
-      val h = value(ini, "agent " + name, "host") getOrElse "localhost"
-      val p = value(ini, "agent " + name, "port") map { _.toInt } get;
-      conf.register(new conf.Agent(name, h, p))
-    }
-    
-    for (name <- topics) {
-      conf.register(new conf.Topic(name))
-      val agents = value(ini, "topic " + name, "agents") map { _.split(" ").toList } getOrElse List()
-      for (agent <- agents) {
-        conf.register(agent, name)
-      }
-    }
-    
-    for (name <- domains) {
+    val domainList = domains.map { name: String =>
       val h = value(ini, "domain " + name, "host") getOrElse "localhost"
       val p = value(ini, "domain " + name, "port") map { _.toInt } get;
-      conf.register(new conf.Domain(name, h, p))      
+      new Domain(name, h, p)
     }
+    
+    Conf(agentList, topicList, domainList)
   }
 }

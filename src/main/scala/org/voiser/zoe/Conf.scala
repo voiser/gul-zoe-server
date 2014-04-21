@@ -26,61 +26,59 @@
 
 package org.voiser.zoe
 
-import scala.collection.mutable.HashMap
-import scala.collection.mutable.LinkedList
-import scala.collection.mutable.MutableList
+import java.util.NoSuchElementException
 
-class Conf {
-    
-  /**
-   * 
-   */
-  class Agent (val name: String, val host: String, val port: Int) extends Host
+class Agent (val name: String, val host: String, val port: Int) extends Host {
+  override def toString() = "agent-" + name + "@" + host + ":" + port
+}
   
-  class Domain (val name: String, val host: String, val port: Int) extends Host
+class Domain (val name: String, val host: String, val port: Int) extends Host {
+  override def toString() = "domain-" + name + "@" + host + ":" + port
+}
   
-  class Topic (val name: String) {
-    val agents = MutableList[String]()
+class Topic (val name: String, val agents: List[String]) {
+  override def toString() = "topic-" + name + ":" + agents.mkString(",")
+}
+  
+class Conf (val agents: Map[String, Agent],
+            val topics: Map[String, Topic], 
+            val domains: Map[String, Domain]) {
+  
+  def register(a: Agent) = new Conf(agents + (a.name -> a), topics, domains)
+  
+  def register(t: Topic) = new Conf(agents, topics + (t.name -> t), domains)
+  
+  def register(a: Agent, t: Topic):Conf = {
+    val topicAgents = 
+      if (topics.contains(t.name)) a.name :: topics(t.name).agents
+      else List(a.name)
+    val topic = new Topic(t.name, topicAgents)
+    new Conf(
+        agents + (a.name -> a),
+        topics + (t.name -> topic), 
+        domains)
   }
   
-  /**
-   * 
-   */
-  val agentMap = new HashMap[String, Agent] 
-  
-  val topicMap = new HashMap[String, Topic]
-  
-  val domainMap = new HashMap[String, Domain]
- 
-  /**
-   * 
-   */
-  def register(agent: Agent) = synchronized { 
-    println("Registering agent " + agent.name + " at " + agent.host + ":" + agent.port)
-    agentMap.put(agent.name, agent) 
+  def agentsAt(topic: String) = {
+    val agents0 = 
+      if (topics.contains(topic)) topics(topic).agents
+      else List[String]()
+      agents0 map { a: String => agents(a) }
   }
-  
-  def register(topic: Topic) = synchronized {
-    println("Registering topic " + topic.name)
-    topicMap.put(topic.name, topic) 
-  }
-  
-  def register(agent: String, topic: String) = synchronized {
-    println("Registering agent " + agent + " listening to topic " + topic)
-    topicMap(topic).agents += agent
-  }
-  
-  def register(domain: Domain) = synchronized {
-    println("Registering domain " + domain.name + " at " + domain.host + ":" + domain.port)
-    domainMap.put(domain.name, domain) 
-  }
-    
-  /**
-   * 
-   */
-  lazy val agents = agentMap.keySet
+} 
 
-  lazy val topics = topicMap.keySet
+object Conf {
   
-  lazy val domains = domainMap.keySet
+  def apply() = new Conf(Map[String, Agent](), Map[String, Topic](), Map[String, Domain]());
+  
+  def apply(agents: List[Agent], 
+            topics: List[Topic], 
+            domains: List[Domain]) = {
+    
+    val agentMap = agents.map { a: Agent => (a.name, a) } toMap
+    val topicMap = topics.map { t: Topic => (t.name, t) } toMap
+    val domainMap = domains.map { d: Domain => (d.name, d) } toMap
+    
+    new Conf(agentMap, topicMap, domainMap)
+  }
 }
