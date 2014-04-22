@@ -50,9 +50,9 @@ class Conf (val agents: Map[String, Agent],
   
   def register(a: Agent, t: Topic):Conf = {
     val topicAgents = 
-      if (topics.contains(t.name)) a.name :: topics(t.name).agents
-      else List(a.name)
-    val topic = new Topic(t.name, topicAgents)
+      if (topics.contains(t.name)) a.name :: t.agents ::: topics(t.name).agents
+      else a.name :: t.agents      
+    val topic = new Topic(t.name, topicAgents.distinct)
     new Conf(
         agents + (a.name -> a),
         topics + (t.name -> topic), 
@@ -63,7 +63,7 @@ class Conf (val agents: Map[String, Agent],
     val agents0 = 
       if (topics.contains(topic)) topics(topic).agents
       else List[String]()
-      agents0 map { a: String => agents(a) }
+    agents0 map { a: String => agents(a) }
   }
 } 
 

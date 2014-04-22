@@ -13,6 +13,9 @@ import java.net.Socket
 import java.net.ServerSocket
 import scala.io.Source
 import org.voiser.zoe.ConfFileReader
+import akka.actor.ActorSystem
+import org.junit.AfterClass
+import org.voiser.zoe.ServerMessage
 
 @RunWith(classOf[JUnitRunner])
 class ServerTest extends FunSuite {
@@ -30,12 +33,6 @@ class ServerTest extends FunSuite {
   
   trait Fixtures {
     val conf = ConfFileReader(this.getClass().getResourceAsStream("/zoe.conf"));
-    // conf.register(new conf.Agent("agent1", "localhost", 30100))
-    // conf.register(new conf.Agent("agent2", "localhost", 30200))
-    // conf.register(new conf.Topic("topic1", List ("agent1", "agent2")))
-    // conf.register(new conf.Domain("extern1", "192.168.1.100", 30000))    
-    // conf.register(new conf.Domain("extern2", "192.168.2.100", 30000))
-    // conf.register(new conf.Domain("gateway", "localhost", 31000))
     val s1 = new Server(30000, "domain1", "gateway", conf)
     val r1 = s1.router
   }
@@ -131,6 +128,7 @@ class ServerTest extends FunSuite {
       s1.dispatch(m)
       t1.join()
       assert(m.toString === l1.contents)
+      s1.stop
     }
   }
 
@@ -148,6 +146,7 @@ class ServerTest extends FunSuite {
       t2.join()
       assert(m.toString === l1.contents)
       assert(m.toString === l2.contents)
+      s1.stop
     }
   }
   
@@ -164,6 +163,41 @@ class ServerTest extends FunSuite {
       assert(mp.get("dd") === Some("gateway"))
       assert(mp.list("vd") === Some(List("domain1")))
       assert(mp.get("payload") === Some("ABC"))
+      s1.stop
+    }
+  }
+
+  test("register agent") {
+    new Fixtures {
+      val l1 = new Listener(10000)
+      val t1 = new Thread(l1)
+      t1.start()
+      val m1 = new MessageParser("dst=server&tag=register&name=my_agent&host=localhost&port=10000")
+      val m2 = new MessageParser("dst=my_agent&payload=ABC")
+      s1.dispatch(m1)
+      Thread.sleep(1000)
+      s1.dispatch(m2)
+      t1.join
+      val mp = new MessageParser(l1.contents)
+      assert(mp.get("payload") === Some("ABC"))
+      s1.stop
+    }
+  }
+  
+  test("register agent and topic") {
+    new Fixtures {
+      val l1 = new Listener(10000)
+      val t1 = new Thread(l1)
+      t1.start()
+      val m1 = new MessageParser("dst=server&tag=register&name=my_agent&host=localhost&port=10000&topic=my_topic1&topic=my_topic2")
+      val m2 = new MessageParser("topic=my_topic1&payload=ABC")
+      s1.dispatch(m1)
+      Thread.sleep(1000)
+      s1.dispatch(m2)
+      t1.join
+      val mp = new MessageParser(l1.contents)
+      assert(mp.get("payload") === Some("ABC"))
+      s1.stop
     }
   }
 }

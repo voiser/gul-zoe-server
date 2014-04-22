@@ -31,6 +31,11 @@ class Router (val domain: String, val gateway: String, val conf: Conf) {
   /**
    * 
    */
+  def withConf(newConf: Conf) = new Router(domain, gateway, newConf)
+  
+  /**
+   * 
+   */
   val identityTransformer = (mp: MessageParser) => mp
   
   /**
@@ -116,15 +121,11 @@ class Router (val domain: String, val gateway: String, val conf: Conf) {
   /**
    * Builds a list of destinations for local delivery
    */
-  def localDestinations(mp: MessageParser) = {
-    println ("Voy a calcular los destinos locales")
-    val destinations = for (d <- dispatchers) yield d(mp)
-    println ("Mis destinos son: " + destinations)
-    destinations.flatten.distinct
-  }
+  def localDestinations(mp: MessageParser) = 
+    dispatchers.flatMap( d => d(mp) ).distinct
   
   /**
-   * Bulds a list of destinations for remote delivery
+   * Builds a list of destinations for remote delivery
    */
   def remoteDestinations(mp: MessageParser): List[Destination] = 
     mp get "dd" map { 

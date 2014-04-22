@@ -26,5 +26,7 @@
 
 package org.voiser.zoe
 
-case class Message(val mp: MessageParser, val dest: Destination)
+class Message
+case class ServerMessage(val mp: MessageParser) extends Message
+case class AgentMessage(val mp: MessageParser, val dest: Destination) extends Message
 

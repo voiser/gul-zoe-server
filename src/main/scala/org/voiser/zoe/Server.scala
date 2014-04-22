@@ -29,9 +29,9 @@ package org.voiser.zoe
 import java.net.Socket
 import scala.io.Source
 import java.net.ServerSocket
-import scala.actors.Actor
-import scala.actors.Actor._
 import javax.print.PrintService
+import akka.actor.Props
+import akka.actor.ActorSystem
 
 class Server(
     val port: Int, 
@@ -46,40 +46,43 @@ class Server(
   val router = new Router(domain, gateway, conf)
   
   /**
-   * The message dispatcher.
+   * The dispatcher actor
    */
-  private val dispatcher = new Dispatcher(router);
-  dispatcher.start
-  
+  val system = ActorSystem.create("zoe")
+  val dispatcher = system.actorOf(Props(new Dispatcher(router)), "dispatcher-actor")
+
   /**
    * Dispatches an incoming message.
    */
-  def dispatch(mp: MessageParser) = dispatcher ! mp 
-    
-  /**
-   * Reads from a socket into a String
-   */
-  def read(socket: Socket): String = {
-    val is = socket getInputStream()
-    Source.fromInputStream(is, "UTF-8").mkString
-  }
+  def dispatch(mp: MessageParser) = dispatcher ! mp
+
+  def stop = system.shutdown
   
-  /**
-   * Starts the server, accepting connections and dispatching messages
-   */
-  def start() {
-    val serverSocket = new ServerSocket(port)
-    serverSocket.setReuseAddress(true)
-    while (true) {
-      try {
-        val socket = serverSocket accept
-        val message = new MessageParser(read(socket))
-        socket.close
-        dispatch(message)
-      }
-      catch {
-      case e: Exception => e.printStackTrace()
-      }
-    }
-  }  
+//    
+//  /**
+//   * Reads from a socket into a String
+//   */
+//  def read(socket: Socket): String = {
+//    val is = socket getInputStream()
+//    Source.fromInputStream(is, "UTF-8").mkString
+//  }
+//  
+//  /**
+//   * Starts the server, accepting connections and dispatching messages
+//   */
+//  def start() {
+//    val serverSocket = new ServerSocket(port)
+//    serverSocket.setReuseAddress(true)
+//    while (true) {
+//      try {
+//        val socket = serverSocket accept
+//        val message = new MessageParser(read(socket))
+//        socket.close
+//        dispatch(message)
+//      }
+//      catch {
+//      case e: Exception => e.printStackTrace()
+//      }
+//    }
+//  }  
 }

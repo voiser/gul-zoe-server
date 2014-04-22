@@ -76,7 +76,23 @@ class ConfTest extends FunSuite {
     val topic = new Topic("topic", List())
     val conf2 = conf.register(agent, topic).register(agent2, topic)
     val agents = conf2.agentsAt(topic.name)
-    println(agents)
+    assert(conf2.topics.size == 1)
+    val t = conf2.topics(topic.name)
+    assert(t.name === topic.name)
+    assert(t.agents === List(agent2.name, agent.name))
+  }
+
+  test("Agent & topic registration 3") {
+    val conf = Conf()
+    val agent = new Agent("agent", "localhost", 10000);
+    val agent2 = new Agent("agent2", "localhost", 10001);
+    val topic = new Topic("topic", List(agent2.name))
+    val conf2 = conf.register(agent).register(agent2).register(agent, topic)
+    val agents = conf2.agentsAt(topic.name)
+    assert(conf2.topics.size == 1)
+    val t = conf2.topics(topic.name)
+    assert(t.name === topic.name)
+    assert(t.agents === List(agent.name, agent2.name))    
   }
 }
 

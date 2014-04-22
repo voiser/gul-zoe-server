@@ -26,53 +26,64 @@
 
 package org.voiser.zoe
 
-import scala.actors.Actor
-import scala.actors.Actor._
 import java.net.Socket
+import akka.actor.Actor
 
-class Dispatcher(router: Router) extends Actor {
-
+class Dispatcher(r: Router) extends Actor {
+  
   /**
-   * The actor loop 
+   * The agent receiving function
    */
-  def act() = {
-    loop {
-      react {
-        case mp: MessageParser => {
-          mp.log("Received message:")
-          for (dest <- router.destinations(mp)) {
-            this ! new Message(mp, dest)
-          }
-        }
-        case Message(mp, dest) => {
-          val host = dest.host
-          val port = dest.port
-          val tr = dest.transformer
-          val msg = tr(mp)
-          val destination = msg get "dst" match {
-            case Some(d) => "agent:" + d
-            case None => msg get "topic" match {
-              case Some(t) => "topic:" + t
-              case None => "unknown destination"
-            }
-          }
-          val domain = msg get "dd" match {
-            case Some(d) => "domain:" + d
-            case None => "local domain"
-          }
+  def receive = dispatch(r)
+  
+  /**
+   * Dispatches an incoming message
+   */
+  def dispatch(router:Router):Receive = {
+
+    case mp: MessageParser => 
+      val messages = analyze(router, mp)
+      messages.foreach { m => self ! m }
+    
+    case AgentMessage(mp, dest) => 
+      send(mp, dest)
+    
+    case ServerMessage(mp) => 
+      mp.get("tag") match {
+        
+        case Some("register") =>
+          val name = mp.get("name") get
+          val host = mp.get("host") get
+          val port = mp.get("port") map { _.toInt } get
+          val agent = new Agent(name, host, port)
+          val topics = mp.list("topic") getOrElse(List()) map { name => new Topic(name, List()) } 
+          val newConf1 = router.conf.register(agent)
+          val newConf2 = topics.foldLeft(newConf1) { (conf, topic) => conf.register(agent, topic) }
+          val newRouter = router.withConf(newConf2)
+          context.become(dispatch(newRouter), true)
           
-          msg.log("Sending message to " + host + ":" + port + " (" + destination + " " + domain + ")")
-          send(msg, host, port)          
-        }
+        case _ => 
+          println("A message was sent to the server with an invalid tag. Ignoring it.")
       }
-    }
   }
-
+  
   /**
-   * Avoid exceptions to stop the actor.
+   * Generates a bunch of messages from a MessageParser
    */
-  override def exceptionHandler = {
-    case e: Exception => e.printStackTrace()
+  def analyze(router: Router, mp: MessageParser) =
+    mp.get("dst") match {
+      case Some("server") => List(ServerMessage(mp))
+      case _ => router.destinations(mp) map { dest: Destination => new AgentMessage(mp, dest) }
+    }
+    
+  /**
+   * Sends a message to a destination
+   */
+  def send(mp: MessageParser, dest: Destination) {
+    val host = dest.host
+    val port = dest.port
+    val msg = dest.transformer(mp)
+    send(msg, host, port)
   }
   
   /**
