@@ -56,33 +56,35 @@ class Server(
    */
   def dispatch(mp: MessageParser) = dispatcher ! mp
 
-  def stop = system.shutdown
+  /**
+   * Reads from a socket into a String
+   */
+  def read(socket: Socket): String = {
+    val is = socket getInputStream()
+    Source.fromInputStream(is, "UTF-8").mkString
+  }
   
-//    
-//  /**
-//   * Reads from a socket into a String
-//   */
-//  def read(socket: Socket): String = {
-//    val is = socket getInputStream()
-//    Source.fromInputStream(is, "UTF-8").mkString
-//  }
-//  
-//  /**
-//   * Starts the server, accepting connections and dispatching messages
-//   */
-//  def start() {
-//    val serverSocket = new ServerSocket(port)
-//    serverSocket.setReuseAddress(true)
-//    while (true) {
-//      try {
-//        val socket = serverSocket accept
-//        val message = new MessageParser(read(socket))
-//        socket.close
-//        dispatch(message)
-//      }
-//      catch {
-//      case e: Exception => e.printStackTrace()
-//      }
-//    }
-//  }  
+  /**
+   * Starts the server, accepting connections and dispatching messages
+   */
+  def start() {
+    val serverSocket = new ServerSocket(port)
+    serverSocket.setReuseAddress(true)
+    while (true) {
+      try {
+        val socket = serverSocket accept
+        val message = new MessageParser(read(socket))
+        socket.close
+        dispatch(message)
+      }
+      catch {
+        case e: Exception => e.printStackTrace()
+      }
+    }
+  }  
+
+  /**
+   * Guess what
+   */
+  def stop = system.shutdown
 }

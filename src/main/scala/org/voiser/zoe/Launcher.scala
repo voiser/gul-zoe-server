@@ -89,7 +89,7 @@ object Launcher {
       println("  domain: " + domain)
       println("  gateway: " + gateway)
 
-      //server start
+      server start
   }
   
   def main(args: Array[String]): Unit = {
