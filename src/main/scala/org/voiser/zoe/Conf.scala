@@ -65,6 +65,12 @@ class Conf (val agents: Map[String, Agent],
       else List[String]()
     agents0 map { a: String => agents(a) }
   }
+  
+  def log = {
+    println("Current configuration:")
+    println("  Agents: " + agents.values.mkString(", "))
+    println("  Topics: " + topics.values.mkString(", "))
+  }
 } 
 
 object Conf {

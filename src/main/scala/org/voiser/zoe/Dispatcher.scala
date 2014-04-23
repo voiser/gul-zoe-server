@@ -42,13 +42,16 @@ class Dispatcher(r: Router) extends Actor {
   def dispatch(router:Router):Receive = {
 
     case mp: MessageParser => 
+      println("Received MP: " + mp)
       val messages = analyze(router, mp)
       messages.foreach { m => self ! m }
     
     case AgentMessage(mp, dest) => 
+      println("Received AM: " + mp + " -> " + dest)
       send(mp, dest)
     
     case ServerMessage(mp) => 
+      println("Received SM: " + mp)
       mp.get("tag") match {
         
         case Some("register") =>
@@ -60,6 +63,8 @@ class Dispatcher(r: Router) extends Actor {
           val newConf1 = router.conf.register(agent)
           val newConf2 = topics.foldLeft(newConf1) { (conf, topic) => conf.register(agent, topic) }
           val newRouter = router.withConf(newConf2)
+          println("Registering " + agent)
+          newConf2.log
           context.become(dispatch(newRouter), true)
           
         case _ => 
