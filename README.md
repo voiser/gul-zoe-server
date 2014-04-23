@@ -7,3 +7,8 @@ You can find the original server here:
 
 https://github.com/guluc3m/gul-zoe/blob/master/src/zoe/zs.py
 
+
+building
+========
+
+Use SBT and the assembly command.
