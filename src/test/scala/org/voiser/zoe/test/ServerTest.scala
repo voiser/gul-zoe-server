@@ -200,5 +200,25 @@ class ServerTest extends FunSuite {
       s1.stop
     }
   }
+  
+  test("register two agents") {
+    new Fixtures {
+      val l2 = new Listener(10001)
+      val t2 = new Thread(l2)
+      t2.start()
+      val m1 = new MessageParser("dst=server&tag=register&name=agent1&host=localhost&port=10000")
+      val m2 = new MessageParser("dst=server&tag=register&name=agent2&host=localhost&port=10001")
+      val m3 = new MessageParser("dst=agent2&payload=ABC")
+      s1.dispatch(m1)
+      Thread.sleep(1000)
+      s1.dispatch(m2)
+      Thread.sleep(1000)
+      s1.dispatch(m3)
+      t2.join
+      val mp = new MessageParser(l2.contents)
+      assert(mp.get("payload") === Some("ABC"))
+      s1.stop
+    }    
+  }
 }
 

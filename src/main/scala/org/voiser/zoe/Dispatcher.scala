@@ -94,10 +94,13 @@ class Dispatcher(r: Router) extends Actor {
   /**
    * Sends a message to a host:port
    */
-  def send(mp: MessageParser, host: String, port: Int) = {
-    val socket = new Socket(host, port)
-    val os = socket.getOutputStream()
-    os.write(mp.bytes)
-    os.close
-  }
+  def send(mp: MessageParser, host: String, port: Int) = 
+    try {
+      val socket = new Socket(host, port)
+      val os = socket.getOutputStream()
+      os.write(mp.bytes)
+      os.close
+    } catch {
+      case _ => println("Can't send message to " + host + ":" + port)
+    }
 }
